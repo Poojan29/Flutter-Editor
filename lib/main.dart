@@ -47,9 +47,10 @@ class _MyHomePageState extends State<MyHomePage> {
 
   late Map<Permission, PermissionStatus> statuses;
 
-  double _scale = 1.0;
-  double _previousScale = 1.0;
+  double _scale = 0.3;
+  double _previousScale = 0.3;
   double _rotation = 0.0;
+  double _previousRotation = 0.0;
   Offset _position = Offset(0, 0);
   Offset _startPosition = Offset(0, 0);
 
@@ -79,8 +80,11 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> captureImage() async {
     final imagePath = await captureImageFromCamera();
+    print("Image path $imagePath");
     setState(() {
-      capturedImagePath = imagePath;
+      if (imagePath != null) {
+        capturedImagePath = imagePath;
+      }
     });
   }
 
@@ -99,9 +103,10 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   resetPositions() {
-    _scale = 1.0;
-    _previousScale = 1.0;
+    _scale = 0.3;
+    _previousScale = 0.3;
     _rotation = 0.0;
+    _previousRotation = 0.0;
     _position = Offset(0, 0);
     _startPosition = Offset(0, 0);
   }
@@ -136,98 +141,93 @@ class _MyHomePageState extends State<MyHomePage> {
               icon: const Icon(Icons.add_a_photo))
         ],
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: <Widget>[
-            Stack(
-              children: [
-                capturedImagePath != null
-                    ? Image.file(
-                        File(capturedImagePath!),
-                        fit: BoxFit.fill,
-                      )
-                    : const Text("Please capture image."),
-                selectedImagePath != null
-                    ? Positioned(
-                        left: _position.dx,
-                        top: _position.dy,
-                        child: GestureDetector(
-                          onScaleStart: (details) {
-                            _previousScale = _scale;
-                            _startPosition = details.focalPoint;
-                            if (!isDeleteIconVisible) {
-                              setState(() {
-                                isDeleteIconVisible = true;
-                              });
-                            }
-                          },
-                          onScaleEnd: (details) {
-                            if (isDeleteIconVisible) {
-                              setState(() {
-                                isDeleteIconVisible = false;
-                              });
-                            }
-                            if (isDeleteButtonActive) {
-                              setState(() {
-                                selectedImagePath = null;
-                                resetPositions();
-                              });
-                            }
-                          },
-                          onScaleUpdate: (details) {
-                            setState(() {
-                              _scale = _previousScale * details.scale;
-                              _rotation = details.rotation;
-                              _position = _position +
-                                  details.focalPoint -
-                                  _startPosition -
-                                  Offset(0, 0);
-                              _startPosition = details.focalPoint;
-                            });
-                          },
-                          child: Listener(
-                            onPointerMove: (event) {
-                              if (event.position.dy >
-                                  MediaQuery.of(context).size.height - 50) {
-                                setState(() {
-                                  isDeleteButtonActive = true;
-                                });
-                              } else {
-                                setState(() {
-                                  isDeleteButtonActive = false;
-                                });
-                              }
-                            },
-                            child: Transform.rotate(
-                              angle: _rotation,
-                              child: Transform.scale(
-                                scale: _scale,
-                                child: Image.file(
-                                  File(selectedImagePath!),
-                                  fit: BoxFit.contain,
-                                ),
-                              ),
-                            ),
+      body: Stack(
+        children: [
+          capturedImagePath != null
+              ? Image.file(
+                  File(capturedImagePath!),
+                  height: MediaQuery.of(context).size.height,
+                  fit: BoxFit.fitHeight,
+                )
+              : const Text("Please capture image."),
+          selectedImagePath != null
+              ? Positioned(
+                  left: _position.dx,
+                  top: _position.dy,
+                  child: GestureDetector(
+                    onScaleStart: (details) {
+                      _previousScale = _scale;
+                      _previousRotation = _rotation;
+                      _startPosition = details.focalPoint;
+                      if (!isDeleteIconVisible) {
+                        setState(() {
+                          isDeleteIconVisible = true;
+                        });
+                      }
+                    },
+                    onScaleEnd: (details) {
+                      if (isDeleteIconVisible) {
+                        setState(() {
+                          isDeleteIconVisible = false;
+                        });
+                      }
+                      if (isDeleteButtonActive) {
+                        setState(() {
+                          selectedImagePath = null;
+                          resetPositions();
+                        });
+                      }
+                    },
+                    onScaleUpdate: (details) {
+                      setState(() {
+                        _scale = _previousScale * details.scale;
+                        _rotation = _previousRotation + details.rotation;
+                        _position = _position +
+                            details.focalPoint -
+                            _startPosition -
+                            Offset(0, 0);
+                        _startPosition = details.focalPoint;
+                      });
+                    },
+                    child: Listener(
+                      onPointerMove: (event) {
+                        if (event.position.dy >
+                            MediaQuery.of(context).size.height - 50) {
+                          setState(() {
+                            isDeleteButtonActive = true;
+                          });
+                        } else {
+                          setState(() {
+                            isDeleteButtonActive = false;
+                          });
+                        }
+                      },
+                      child: Transform.rotate(
+                        angle: _rotation,
+                        child: Transform.scale(
+                          scale: _scale,
+                          child: Image.file(
+                            File(selectedImagePath!),
+                            fit: BoxFit.contain,
                           ),
                         ),
-                      )
-                    : Container()
-              ],
-            ),
-            if (isDeleteIconVisible)
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Align(
-                    alignment: Alignment.bottomCenter,
-                    child: Icon(
-                      Icons.delete,
-                      size: isDeleteButtonActive ? 30 : 25,
-                      color: isDeleteButtonActive ? Colors.red : Colors.grey,
-                    )),
-              )
-          ],
-        ),
+                      ),
+                    ),
+                  ),
+                )
+              : Container(),
+          if (isDeleteIconVisible)
+            Align(
+                alignment: Alignment.bottomCenter,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16.0),
+                  child: Icon(
+                    Icons.delete,
+                    size: isDeleteButtonActive ? 30 : 25,
+                    color: isDeleteButtonActive ? Colors.red : Colors.grey,
+                  ),
+                ))
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
